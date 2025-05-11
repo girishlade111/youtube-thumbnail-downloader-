@@ -1,0 +1,163 @@
+import { useState } from 'react'
+import { Button } from "/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "/components/ui/card"
+import { Download, Copy } from "lucide-react"
+
+export default function YouTubeThumbnailDownloader() {
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoId, setVideoId] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const extractVideoId = (url: string) => {
+    // Regular expressions to match YouTube URL patterns
+    const patterns = [
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+      /^([^"&?\/\s]{11})$/
+    ]
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match && match[1]) {
+        return match[1]
+      }
+    }
+    return null
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      const id = extractVideoId(videoUrl)
+      if (!id) {
+        throw new Error('Invalid YouTube URL or Video ID')
+      }
+      setVideoId(id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid YouTube URL')
+      setVideoId('')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const generateThumbnailUrl = (size: 'default' | 'hq' | 'maxres') => {
+    if (!videoId) return ''
+    
+    const baseUrl = 'https://img.youtube.com/vi/'
+    switch (size) {
+      case 'default':
+        return `${baseUrl}${videoId}/default.jpg`
+      case 'hq':
+        return `${baseUrl}${videoId}/hqdefault.jpg`
+      case 'maxres':
+        return `${baseUrl}${videoId}/maxresdefault.jpg`
+      default:
+        return `${baseUrl}${videoId}/default.jpg`
+    }
+  }
+
+  const handleCopyUrl = (url: string) => {
+    navigator.clipboard.writeText(url)
+  }
+
+  const thumbnailSizes = [
+    { name: 'Default (120x90)', key: 'default' },
+    { name: 'High Quality (480x360)', key: 'hq' },
+    { name: 'Maximum Resolution (1280x720)', key: 'maxres' }
+  ]
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">
+              YouTube Thumbnail Downloader
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="youtube-url" className="block text-sm font-medium text-gray-700">
+                  YouTube Video URL or ID
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    id="youtube-url"
+                    type="text"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  />
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Processing...' : 'Get Thumbnails'}
+                  </Button>
+                </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+              </div>
+            </form>
+
+            {videoId && (
+              <div className="mt-8 space-y-6">
+                <h3 className="text-lg font-medium text-gray-900">Available Thumbnails</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {thumbnailSizes.map((size) => {
+                    const thumbnailUrl = generateThumbnailUrl(size.key as 'default' | 'hq' | 'maxres')
+                    return (
+                      <div key={size.key} className="border rounded-lg overflow-hidden shadow-sm">
+                        <div className="bg-gray-100 p-2 text-center">
+                          <img
+                            src={thumbnailUrl}
+                            alt={`YouTube thumbnail ${size.name}`}
+                            className="mx-auto h-32 object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22128%22%20height%3D%2272%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20128%2072%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18a7c3b8a4a%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18a7c3b8a4a%22%3E%3Crect%20width%3D%22128%22%20height%3D%2272%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Cpath%20d%3D%22M0%2C72%20L128%2C0%22%20stroke%3D%22%23CCCCCC%22%20stroke-width%3D%221%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M128%2C72%20L0%2C0%22%20stroke%3D%22%23CCCCCC%22%20stroke-width%3D%221%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dy%3D%22.3em%22%3EThumbnail%20Not%20Available%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E'
+                            }}
+                          />
+                        </div>
+                        <div className="p-3 bg-white">
+                          <p className="text-sm font-medium text-gray-900 mb-2">{size.name}</p>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleCopyUrl(thumbnailUrl)}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy URL
+                            </Button>
+                            <a
+                              href={thumbnailUrl}
+                              download={`youtube-thumbnail-${videoId}-${size.key}.jpg`}
+                              className="flex-1"
+                            >
+                              <Button variant="default" size="sm" className="w-full">
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </Button>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="mt-8 text-center text-sm text-gray-600">
+          <p>Simply paste a YouTube URL or video ID above to get all available thumbnails.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
